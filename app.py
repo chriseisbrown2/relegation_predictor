@@ -257,17 +257,41 @@ HOME_BOOST = 0.07
 
 TEAMS = [
     {"id": "LEE", "name": "Leeds United",       "pts": 31, "gd": -12,
-     "remaining": [("CRY",False),("BRE",True),("MUN",False),("WOL",True),("BOU",False),("BUR",True),("TOT",False),("BRI",True),("WHU",False)]},
+     "remaining": [
+         ("CRY",False,"15 Mar"),("BRE",True,"21 Mar"),("MUN",False,"13 Apr"),
+         ("WOL",True,"18 Apr"),("BOU",False,"25 Apr"),("BUR",True,"02 May"),
+         ("TOT",False,"09 May"),("BRI",True,"17 May"),("WHU",False,"24 May"),
+     ]},
     {"id": "TOT", "name": "Tottenham Hotspur",  "pts": 29, "gd": -14,
-     "remaining": [("LFC",False),("NFO",True),("SUN",False),("BRI",True),("WOL",False),("AVL",False),("LEE",True),("CFC",False),("EVE",True)]},
+     "remaining": [
+         ("LFC",False,"15 Mar"),("NFO",True,"22 Mar"),("SUN",False,"12 Apr"),
+         ("BRI",True,"18 Apr"),("WOL",False,"25 Apr"),("AVL",False,"02 May"),
+         ("LEE",True,"09 May"),("CFC",False,"17 May"),("EVE",True,"24 May"),
+     ]},
     {"id": "NFO", "name": "Nottingham Forest",  "pts": 28, "gd": -16,
-     "remaining": [("FUL",True),("TOT",False),("AVL",True),("BUR",True),("SUN",False),("CFC",False),("NEW",True),("MUN",False),("BOU",True)]},
+     "remaining": [
+         ("FUL",True,"15 Mar"),("TOT",False,"22 Mar"),("AVL",True,"11 Apr"),
+         ("BUR",True,"18 Apr"),("SUN",False,"24 Apr"),("CFC",False,"02 May"),
+         ("NEW",True,"09 May"),("MUN",False,"17 May"),("BOU",True,"24 May"),
+     ]},
     {"id": "WHU", "name": "West Ham United",    "pts": 28, "gd": -18,
-     "remaining": [("MCI",True),("AVL",False),("WOL",True),("CRY",False),("EVE",True),("BRE",False),("ARS",True),("NEW",False),("LEE",True)]},
+     "remaining": [
+         ("MCI",True,"14 Mar"),("AVL",False,"22 Mar"),("WOL",True,"10 Apr"),
+         ("CRY",False,"20 Apr"),("EVE",True,"25 Apr"),("BRE",False,"02 May"),
+         ("ARS",True,"09 May"),("NEW",False,"17 May"),("LEE",True,"24 May"),
+     ]},
     {"id": "BUR", "name": "Burnley FC",         "pts": 19, "gd": -28,
-     "remaining": [("BOU",True),("FUL",False),("BRI",True),("NFO",False),("MCI",True),("LEE",False),("AVL",True),("ARS",False),("WOL",True)]},
+     "remaining": [
+         ("BOU",True,"14 Mar"),("FUL",False,"21 Mar"),("BRI",True,"11 Apr"),
+         ("NFO",False,"18 Apr"),("MCI",True,"26 Apr"),("LEE",False,"02 May"),
+         ("AVL",True,"09 May"),("ARS",False,"17 May"),("WOL",True,"24 May"),
+     ]},
     {"id": "WOL", "name": "Wolverhampton W.",   "pts": 16, "gd": -24,
-     "remaining": [("BRE",False),("WHU",False),("LEE",False),("TOT",True),("SUN",False),("BRI",False),("BUR",False),("FUL",True),("BUR",False)]},
+     "remaining": [
+         ("BRE",False,"16 Mar"),("WHU",False,"10 Apr"),("LEE",False,"18 Apr"),
+         ("TOT",True,"25 Apr"),("SUN",False,"02 May"),("BRI",False,"09 May"),
+         ("BUR",False,"17 May"),("FUL",True,"17 May"),("BUR",False,"24 May"),
+     ]},
 ]
 
 COLORS = {
@@ -306,7 +330,7 @@ def run_monte_carlo(iterations=100_000, _seed=42):
     for _ in range(iterations):
         final_pts = {t["id"]: t["pts"] for t in TEAMS}
         for team in TEAMS:
-            for opp, is_home in team["remaining"]:
+            for opp, is_home, _date in team["remaining"]:
                 w, d, _ = calc_win_prob(team["id"], is_home, opp)
                 r = random.random()
                 if   r < w:     final_pts[team["id"]] += 3
@@ -513,7 +537,7 @@ with col_sel:
 with col_detail:
     # Fixture breakdown table
     fix_rows = ""
-    for i, (opp, is_home) in enumerate(selected_team["remaining"]):
+    for i, (opp, is_home, date) in enumerate(selected_team["remaining"]):
         w, d, l = calc_win_prob(selected_id, is_home, opp)
         w_pct, d_pct, l_pct = int(w*100), int(d*100), int(l*100)
         exp_pts = w*3 + d*1
@@ -536,6 +560,7 @@ with col_detail:
         fix_rows += f"""
         <tr style="background:{bg}">
           <td style="color:#555;font-size:11px;padding:8px 10px">{i+1}</td>
+          <td style="font-size:11px;color:#888;font-style:italic;padding:8px 6px;white-space:nowrap">{date}</td>
           <td style="font-size:11px;color:#777;padding:8px 6px;white-space:nowrap">{venue}</td>
           <td style="font-size:13px;color:#ccc;padding:8px 10px">vs <strong style="color:#e8e0d0">{opp}</strong></td>
           <td style="padding:8px 10px;min-width:160px">{bar_html}</td>
@@ -553,6 +578,7 @@ with col_detail:
         <thead>
           <tr style="background:#111118;font-size:10px;letter-spacing:2px;color:#555;text-transform:uppercase">
             <th style="padding:8px 10px;text-align:left;font-weight:400">#</th>
+            <th style="padding:8px 6px;text-align:left;font-weight:400">Date</th>
             <th style="padding:8px 6px;text-align:left;font-weight:400">Venue</th>
             <th style="padding:8px 10px;text-align:left;font-weight:400">Opponent</th>
             <th style="padding:8px 10px;text-align:left;font-weight:400">Win / Draw / Loss</th>
