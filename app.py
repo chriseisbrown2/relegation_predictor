@@ -204,6 +204,20 @@ html, body, [class*="css"] {
 }
 .method-box strong { color: #666; letter-spacing: 1px; }
 
+/* ── Make row/selector buttons invisible — HTML overlays provide the visual ── */
+div[data-testid="stButton"] > button {
+    background: transparent !important;
+    border: none !important;
+    color: transparent !important;
+    height: 38px !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
+}
+div[data-testid="stButton"] > button:hover {
+    background: rgba(255,255,255,0.03) !important;
+}
+
 /* ── Legend row ── */
 .legend-row {
     display: flex;
@@ -390,38 +404,18 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ── Session state: track selected team ───────────────────────────────────────
+
+if "selected_id" not in st.session_state:
+    st.session_state.selected_id = "TOT"
+
 # ── Standings table ───────────────────────────────────────────────────────────
 
 st.markdown('<div class="section-label">Current Standings & Projected Final Points</div>', unsafe_allow_html=True)
 
-rows_html = ""
-for i, team in enumerate(sorted_teams):
-    tid   = team["id"]
-    s     = stats[tid]
-    c     = COLORS[tid]
-    label, lcolor = risk_label(s["rel_pct"])
-    gd_color = "#f87171" if team["gd"] < 0 else "#86efac"
-    marker = "▼" if i >= 3 else "&nbsp;"
-    rows_html += f"""
-    <tr>
-      <td style="color:#ef4444;font-weight:700">{marker}</td>
-      <td style="font-size:12px;color:#555">{i+1}</td>
-      <td>
-        <span class="dot" style="background:{c['primary']};border:2px solid {c['accent']}"></span>
-        <strong style="color:#f0e8d8">{team['name']}</strong>
-      </td>
-      <td class="pts">{team['pts']}</td>
-      <td class="gd" style="color:{gd_color}">{team['gd']}</td>
-      <td class="num" style="color:#a5b4fc;font-weight:600">{s['median_pts']}</td>
-      <td class="num" style="color:#666;font-size:11px">{s['p10_pts']}–{s['p90_pts']}</td>
-      <td class="right">
-        <span class="risk-badge" style="background:{lcolor}22;color:{lcolor}">{label}</span>
-      </td>
-      <td class="right" style="font-weight:700;color:{danger_color(s['rel_pct'])};font-size:15px">{s['rel_pct']}%</td>
-    </tr>"""
-
-st.markdown(f"""
-<table class="standings-table">
+# Table header
+st.markdown("""
+<table class="standings-table" style="margin-bottom:0">
   <thead>
     <tr>
       <th></th><th>#</th><th>Club</th>
@@ -430,10 +424,60 @@ st.markdown(f"""
       <th class="right">Risk</th><th class="right">Rel %</th>
     </tr>
   </thead>
-  <tbody>{rows_html}</tbody>
 </table>
+""", unsafe_allow_html=True)
+
+# One Streamlit button per row so clicks update session_state
+for i, team in enumerate(sorted_teams):
+    tid      = team["id"]
+    s        = stats[tid]
+    c        = COLORS[tid]
+    label, lcolor = risk_label(s["rel_pct"])
+    gd_color = "#f87171" if team["gd"] < 0 else "#86efac"
+    marker   = "▼" if i >= 3 else "&nbsp;"
+    is_sel   = st.session_state.selected_id == tid
+    row_bg   = "#1a1a2a" if is_sel else ("#0d0d14" if i % 2 == 0 else "#0f0f18")
+    border_l = f"3px solid {c['accent']}" if is_sel else "3px solid transparent"
+    name_wt  = "700" if is_sel else "400"
+    name_col = "#f0e8d8" if is_sel else "#ccc"
+
+    col_btn, col_row = st.columns([0.001, 1])
+    with col_row:
+        row_clicked = st.button(
+            label=" ",   # invisible label — full row is styled via HTML overlay
+            key=f"row_{tid}",
+            use_container_width=True,
+        )
+        if row_clicked:
+            st.session_state.selected_id = tid
+            st.rerun()
+
+    st.markdown(f"""
+    <div onclick="document.querySelector('[data-testid=\\"stButton\\"] button[kind=\\"secondary\\"]').click()"
+         style="pointer-events:none;margin-top:-42px;border-bottom:1px solid #1a1a24;
+                background:{row_bg};border-left:{border_l};padding:10px 16px;
+                display:grid;grid-template-columns:20px 20px 1fr 52px 52px 68px 88px 120px 72px;
+                gap:8px;align-items:center;font-family:'Source Sans 3',sans-serif;cursor:pointer">
+      <span style="color:#ef4444;font-weight:700;font-size:12px">{marker}</span>
+      <span style="font-size:11px;color:#555">{i+1}</span>
+      <span>
+        <span class="dot" style="background:{c['primary']};border:2px solid {c['accent']}"></span>
+        <strong style="color:{name_col};font-weight:{name_wt};font-size:13px">{team['name']}</strong>
+      </span>
+      <span style="text-align:center;font-weight:700;font-size:14px;color:#f0e8d8">{team['pts']}</span>
+      <span style="text-align:center;font-size:12px;color:{gd_color}">{team['gd']}</span>
+      <span style="text-align:center;font-size:13px;color:#a5b4fc;font-weight:600">{s['median_pts']}</span>
+      <span style="text-align:center;font-size:11px;color:#666">{s['p10_pts']}–{s['p90_pts']}</span>
+      <span style="text-align:right">
+        <span class="risk-badge" style="background:{lcolor}22;color:{lcolor}">{label}</span>
+      </span>
+      <span style="text-align:right;font-weight:700;color:{danger_color(s['rel_pct'])};font-size:15px">{s['rel_pct']}%</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("""
 <div style="font-size:11px;color:#444;margin-top:8px;font-style:italic">
-  Median = most likely final points · P10 = pessimistic · P90 = optimistic
+  Median = most likely final points · P10 = pessimistic · P90 = optimistic · Click any row to inspect fixtures below
 </div>
 """, unsafe_allow_html=True)
 
@@ -493,15 +537,44 @@ st.markdown('<div class="section-label">Fixture-by-Fixture Breakdown</div>', uns
 col_sel, col_detail = st.columns([1, 2.6], gap="large")
 
 with col_sel:
-    team_options = {t["name"]: t["id"] for t in sorted_teams}
-    selected_name = st.radio(
-        "Select a club",
-        options=list(team_options.keys()),
-        index=1,   # default: Tottenham
-        label_visibility="collapsed",
-    )
-    selected_id = team_options[selected_name]
+    # Styled clickable team list — synced with standings table via session_state
+    st.markdown('<div class="section-label">Select Club</div>', unsafe_allow_html=True)
+    for team in sorted_teams:
+        tid   = team["id"]
+        c     = COLORS[tid]
+        is_sel = st.session_state.selected_id == tid
+        btn_bg     = f"linear-gradient(135deg,{c['primary']}44 0%,#1a1a2a 100%)" if is_sel else "#111118"
+        border_col = c["accent"] if is_sel else "#1e1e2e"
+        name_col   = "#f0e8d8" if is_sel else "#aaa"
+        pct        = stats[tid]["rel_pct"]
+
+        if st.button(
+            f"{'▶ ' if is_sel else '   '}{team['name']}",
+            key=f"sel_{tid}",
+            use_container_width=True,
+        ):
+            st.session_state.selected_id = tid
+            st.rerun()
+
+        # Overlay styling on the button above
+        st.markdown(f"""
+        <style>
+        div[data-testid="stButton"] > button[kind="secondary"]:has(~ *) {{}}
+        </style>
+        <div style="margin-top:-40px;margin-bottom:4px;pointer-events:none;
+                    background:{btn_bg};border:1px solid {border_col};border-radius:6px;
+                    padding:8px 12px;display:flex;align-items:center;gap:10px;
+                    font-family:'Source Sans 3',sans-serif">
+          <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;
+                      background:{c['primary']};border:2px solid {c['accent']}"></div>
+          <span style="color:{name_col};font-size:13px;font-weight:{'700' if is_sel else '400'}">{team['name']}</span>
+          <span style="margin-left:auto;font-size:11px;font-weight:700;color:{danger_color(pct)}">{pct}%</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    selected_id   = st.session_state.selected_id
     selected_team = next(t for t in TEAMS if t["id"] == selected_id)
+    selected_name = selected_team["name"]
     s = stats[selected_id]
     c = COLORS[selected_id]
 
